@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ぶいすぽメンバークイズ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+:root{--bg:#e8eef5;--card:#fff;--ink:#16243a;--sub:#5b6b82;--line:#c9d5e3;--accent:#2f5bd8;--accent-ink:#fff;--ok:#1f8a5b;--okbg:#dff3e9;--ng:#c2412d;--ngbg:#fbe4df;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1826;--card:#18253a;--ink:#e8eef8;--sub:#9fb0c8;--line:#2c3d58;--accent:#7ea2ff;--accent-ink:#0f1826;--ok:#5fd29b;--okbg:#17382b;--ng:#ff907b;--ngbg:#43211b}}
+:root[data-theme="dark"]{--bg:#0f1826;--card:#18253a;--ink:#e8eef8;--sub:#9fb0c8;--line:#2c3d58;--accent:#7ea2ff;--accent-ink:#0f1826;--ok:#5fd29b;--okbg:#17382b;--ng:#ff907b;--ngbg:#43211b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;line-height:1.7;min-height:100vh;display:flex;justify-content:center}
+main{width:100%;max-width:560px;padding:24px 16px 40px}
+h1{font-size:1.6rem;font-weight:900;margin:8px 0 4px}
+h2{font-size:1rem;font-weight:700;margin:18px 0 8px}
+p{margin:0}
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:22px 20px}
+.sub{color:var(--sub);font-size:.95rem}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 18px}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.q{font-size:1.25rem;font-weight:700;margin-bottom:16px}
+.q small{display:block;font-size:.9rem;color:var(--sub);font-weight:500}
+.opts{display:grid;gap:10px}
+button{font:inherit;color:inherit;cursor:pointer}
+.opt{text-align:left;background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-weight:500}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt:disabled{cursor:default}
+.opt.ok{background:var(--okbg);border-color:var(--ok)}
+.opt.ng{background:var(--ngbg);border-color:var(--ng)}
+.main{margin-top:16px;width:100%;background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:13px;font-weight:900;font-size:1rem}
+.main:disabled{opacity:.4;cursor:default}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--bg);border:2px solid var(--line);border-radius:99px;padding:4px 14px;font-size:.9rem}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.fb{margin-top:14px;font-size:.95rem}
+.score{font-size:3rem;font-weight:900;line-height:1.1;margin:10px 0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<div id="start" class="card">
+  <h1>ぶいすぽメンバークイズ</h1>
+  <p class="sub">メンバー名と項目から出題。答えはデータベースの該当セルです。</p>
+  <h2>出題する項目</h2>
+  <div class="chips" id="cols"></div>
+  <h2>問題数</h2>
+  <div class="chips" id="nums"></div>
+  <p class="sub" id="pool" style="margin-top:12px"></p>
+  <button class="main" id="go">はじめる</button>
+</div>
+
+<div id="play" hidden>
+  <div class="row sub"><span id="count"></span><span id="pts"></span></div>
+  <div class="bar"><i id="fill"></i></div>
+  <div class="card">
+    <p class="q" id="q"></p>
+    <div class="opts" id="opts"></div>
+    <p class="fb" id="fb" hidden></p>
+    <button class="main" id="next" hidden></button>
+  </div>
+</div>
+
+<div id="end" class="card" hidden>
+  <p class="sub">結果</p>
+  <p class="score" id="final"></p>
+  <p id="msg"></p>
+  <button class="main" id="retry">設定にもどる</button>
+</div>
+</main>
+
+<script>
+const DATA={"headers": ["メンバー名", "読み", "初配信日", "誕生日", "所属チーム", "身長(cm)", "担当絵師", "マスコット", "種別", "配信タグ", "ファンアート", "ボイス感想タグ", "なんでもタグ", "サムネ", "ファンネーム", "ファンマーク"], "rows": [["花芽すみれ", "かが すみれ", "2018-10-20", "04/02", "Lupinus Virtual Games", 154, "みすみ", "ぽやねこ", "ねこくらげ", "おいすーみれ", "すぅあーと", "ぼいすみれ", "花芽すみれ", "でゃでゃ", "すー民", "👾💤"], ["花芽なずな", "かが なずな", "2018-10-20", "04/02", "Lupinus Virtual Games", 154, "みすみ", "チョコ(黒)、チャコ(茶)", "犬", null, "なずなーと", null, "花芽なずな", null, "なずP", "🍣"], ["小雀とと", "こがら とと", "2019-04-18", "10/10", "Lupinus Virtual Games", 148, "木なこ", "ゴンザレス", "カナリア", null, "ととの絵", null, null, null, "とりかご", "🔫🐥"], ["一ノ瀬うるは", "いちのせ うるは", "2019-04-22", "12/23", "Lupinus Virtual Games", 158, "Aちき", null, null, "ぽたく通信", "一ノ瀬の絵", null, null, null, "ぽたく / うる派", "🌠"], ["胡桃のあ", "くるみ のあ", "2020-03-14", "02/13", "Iris Black Games", 155, "くろくま（オリジナル）／magako", "ロロ", "くま(ぬいぐるみ)", "なまのくるみ / 963live", "963art", "963voice", null, null, "963fam", "🧸♔"], ["兎咲ミミ", "とさき みみ", "2020-07-04", "03/03", "Cattleya Regina Games", 148, "jimmy", "ムム", "うさぎ", "こミミばなし", "ミミ画", null, null, null, "ぴょんぴょん隊", "🐰🍭"], ["空澄セナ", "あすみ せな", "2020-07-19", "01/18", "Cattleya Regina Games", 155, "GreeN（オリジナル）／ゆきさめ（リデザイン）", "レオ", "悪魔の相棒", "うるセーナ", "空澄絵", null, null, null, null, "🗝♠"], ["橘ひなの", "たちばな ひなの", "2020-08-14", "11/11", "Iris Black Games", 154, "TAYA", "ｵﾊﾝﾖうさぎ", "うさぎ", "ひなのとたちばなし", "ひなのの絵なの", "ひなのボイスなの", null, null, "ひななー", "🍫💘"], ["英リサ", "はなぶさ りさ", "2020-08-15", "06/03", "Cattleya Regina Games", 160, "JIMA", null, null, "リサ放英中", "はなぶさの絵", null, null, null, "英束（はなたば）", "💐"], ["如月れん", "きさらぎ れん", "2020-10-18", "05/05", "Iris Black Games", 165, "東西", "にゃんじゅう", "ねこ", "放れん送", "れん絡帳", "れん声", null, "サムネ作れん", "れん帯責任", "⏰"], ["神成きゅぴ", "かみなり きゅぴ", "2021-01-09", "05/18", null, 162, "七瀬ここあ／POKImari", "びりりさん", "フェネック", "きゅぴなま", "神成った", null, null, null, "かみなり組", "🌩"], ["八雲べに", "やくも べに", "2021-04-16", "09/25", null, 158, "MAIRO", "くくも", "犬（ぬいぐるみ）", "やくもーしょん", "べにっき", "べにボイス", null, null, "しもべに", "💄💚"], ["藍沢エマ", "あいざわ えま", "2021-09-18", "01/31", null, 156, "遠坂あさぎ", "らん", "ねこ（ぬいぐるみ）", "あいざわーるど", "えまぁーと", "えまぼいす", null, null, "藍方", "🥞💫"], ["紫宮るな", "しのみや るな", "2021-09-26", "02/22", null, 147, "西沢5㍉", "シュガちゃん", "ねこ（ぬいぐるみ）", "るなるーむ", "るなぱれっと", null, null, null, "しのみん", "☪️🐾"], ["猫汰つな", "ねこた つな", "2022-06-24", "11/27", null, 157, "泉彩", "ナツちゃん", "ねこ（ぬいぐるみ）", "つな観", "ねこたぺすとりー", null, null, null, "つな友", "🍒✨"], ["白波らむね", "しらなみ らむね", "2022-08-25", "03/21", null, 153, "裕", "しらたま", "白熊", "らむね屋さん始めました", "らむねはいか画", "白波らむねボイス", null, null, "波ノリ隊", "🐻‍❄️🏖"], ["小森めと", "こもり めと", "2023-02-01", "12/10", null, 156, "憂姫はぐれ", "舎弟", "ねこ", "引き小森日記", "引き小森画", null, null, null, "ドロメイト", "🪐"], ["夢野あかり", "ゆめの あかり", "2023-06-21", "05/05", null, 149, "パセリ", null, null, "あかりん星", "濃いめのアート", null, null, null, "濃い人", "🍼"], ["夜乃くろむ", "やの くろむ", "2023-11-24", "06/16", null, 150, "カンザリン", "ほね組", null, "コツコツくろむ", "くろむアーツ", null, null, null, "ほね組", "💀⛓️"], ["紡木こかげ", "つむぎ こかげ", "2024-03-19", "10/26", null, 152, "藤ちょこ", "もぐお", null, "こかげで一休み", "つむぎふと", "つむおじボイス", null, null, "こもれびと", "📘💧"], ["千燈ゆうひ", "せんどう ゆうひ", "2024-05-02", "12/03", null, 159, "しぐれうい", "ゆうべこ", null, "うひらいぶ", "うひあーと", null, null, null, "てんとうむし🐞", "🫠"], ["蝶屋はなび", "ちょうや はなび", "2024-11-02", "04/09", null, 170, "LAM", "みたらし", "モモンガ", null, null, null, null, null, "かやく", "🦋🎆"], ["甘結もか", "あまゆい もか", "2024-11-02", "02/26", null, 154, "DSマイル", "レバボさん", "アケコンのレバーボールの妖精", null, "もかnote", null, null, null, "もかサンド", "🕹️🔖"], ["銀城サイネ", "ぎんじょう さいね", "2026-01-14", "09/12", null, 164, "ももこ", null, null, "銀城の実況", "サイネイル", null, null, null, "ヘリウ民", "🎈"], ["龍巻ちせ", "たつまき ちせ", "2026-01-14", "07/30", null, 150, "巻羊", "こたつさん", "トカゲ(自認ドラゴン)", null, null, null, null, null, "たつんちゅ", "🐉🌪️"], ["青月レミア", "あおつき れみあ", "2024-06-30", "02/03", "VSPO! EN", 168, "EB十", null, null, "RemiaOnline", "Remiation", null, null, null, "(tomo)BOTchi", "🔋🔭"], ["黒刃アリヤ", "くろは ありや", "2024-06-30", "09/22", "VSPO! EN", 163, "ye_jji", null, null, "aryalive", "aryart", null, null, null, "Wingmen", "♦️🔪"], ["地崎ジラ", "じさき じら", "2024-06-30", "11/04", "VSPO! EN", 143, "しらび", null, null, "jiraINC", "jirart", null, "jirajisaki", null, "Jikama", "⛰️"], ["美暮ナリン", "みくれ ありん", "2024-08-25", "12/09", "VSPO! EN", 154, "necömi", null, null, "narinLive", "narinAtelier", null, null, null, "Kuremon", "🌃🌷"], ["ソラリリコ", "そらり りこ", "2024-08-25", "03/24", "VSPO! EN", 159, "Guchico", null, null, "RikoLive", "Rikreative", null, null, "Rikossets", "RIKONAUTS", "👩‍🚀💜"], ["涼上エリス", "すずかみ えりす", "2025-11-16", "07/12", "VSPO! EN", 157, "Umi", null, null, "erisisLIVE", "erisFinart", null, null, null, null, "🎣☁️"], ["梅園ジュノ", "うめぞの じゅの", "2026-03-29", "08/10", "VSPO! EN", 153, "猫屋敷ぷしお", null, null, null, null, null, null, null, null, null]]};
+const $=id=>document.getElementById(id);
+const H=DATA.headers, R=DATA.rows;
+const fmt=(c,v)=>{
+  v=String(v);
+  if(c==="身長(cm)")return v+" cm";
+  if(c==="誕生日"){const m=v.match(/^(\d+)\/(\d+)$/);if(m)return +m[1]+"月"+ +m[2]+"日"}
+  if(c==="初配信日"){const m=v.match(/^(\d+)-(\d+)-(\d+)$/);if(m)return m[1]+"年"+ +m[2]+"月"+ +m[3]+"日"}
+  return v;
+};
+const label=c=>c.replace(/\(cm\)/,"");
+const has=v=>v!==null&&v!==""&&v!=="—"&&v!=="要確認";
+// 出題できる項目: 有効な答えが4種類以上ある列
+const cols=[];
+for(let j=1;j<H.length;j++){
+  const d=new Set(R.map(r=>r[j]).filter(has).map(v=>fmt(H[j],v)));
+  if(d.size>=4)cols.push(j);
+}
+let selCols=new Set(cols), nQ=10, qs=[], i=0, score=0, locked=false;
+const shuffle=a=>{a=a.slice();for(let k=a.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[a[k],a[j]]=[a[j],a[k]]}return a};
+const pool=()=>{const p=[];selCols.forEach(j=>R.forEach(r=>{if(has(r[j]))p.push([r,j])}));return p};
+
+function drawSetup(){
+  $("cols").innerHTML="";
+  cols.forEach(j=>{
+    const b=document.createElement("button");b.className="chip";b.textContent=label(H[j]);
+    b.setAttribute("aria-pressed",selCols.has(j));
+    b.onclick=()=>{selCols.has(j)?selCols.delete(j):selCols.add(j);drawSetup()};
+    $("cols").appendChild(b);
+  });
+  $("nums").innerHTML="";
+  [5,10,20].forEach(n=>{
+    const b=document.createElement("button");b.className="chip";b.textContent=n+"問";
+    b.setAttribute("aria-pressed",n===nQ);
+    b.onclick=()=>{nQ=n;drawSetup()};
+    $("nums").appendChild(b);
+  });
+  const n=pool().length;
+  $("pool").textContent=n?`出題できる問題: ${n}件`:"項目を1つ以上えらんでください。";
+  $("go").disabled=!n;
+}
+function begin(){
+  qs=shuffle(pool()).slice(0,nQ).map(([r,j])=>{
+    const ans=fmt(H[j],r[j]);
+    const others=[...new Set(R.map(x=>x[j]).filter(has).map(v=>fmt(H[j],v)))].filter(v=>v!==ans);
+    const opts=shuffle([ans,...shuffle(others).slice(0,3)]);
+    return {name:r[0],col:label(H[j]),ans,opts};
+  });
+  i=0;score=0;show("play");render();
+}
+function show(id){["start","play","end"].forEach(x=>$(x).hidden=x!==id)}
+function render(){
+  const c=qs[i];locked=false;
+  $("count").textContent=`${i+1} / ${qs.length}問`;
+  $("pts").textContent=`正解 ${score}`;
+  $("fill").style.width=(i/qs.length*100)+"%";
+  $("q").innerHTML="";
+  $("q").append(`「${c.name}」の「${c.col}」は？`);
+  $("fb").hidden=true;$("next").hidden=true;
+  const box=$("opts");box.innerHTML="";
+  c.opts.forEach(t=>{
+    const b=document.createElement("button");b.className="opt";b.textContent=t;
+    b.onclick=()=>pick(b,t);box.appendChild(b);
+  });
+}
+function pick(btn,t){
+  if(locked)return;locked=true;
+  const c=qs[i],right=t===c.ans;
+  [...$("opts").children].forEach(b=>{b.disabled=true;if(b.textContent===c.ans)b.classList.add("ok")});
+  if(right)score++;else btn.classList.add("ng");
+  $("pts").textContent=`正解 ${score}`;
+  $("fb").textContent=right?"正解です。":`不正解です。答えは「${c.ans}」です。`;
+  $("fb").hidden=false;
+  $("next").textContent=i===qs.length-1?"結果を見る":"次の問題へ";
+  $("next").hidden=false;$("next").focus();
+}
+function next(){
+  if(i===qs.length-1){
+    $("fill").style.width="100%";show("end");
+    $("final").textContent=`${score} / ${qs.length}`;
+    const r=score/qs.length;
+    $("msg").textContent=r===1?"全問正解です。":r>=.7?"よくできました。":r>=.4?"あと少しです。":"もう一度挑戦してみましょう。";
+    return;
+  }
+  i++;render();
+}
+$("go").onclick=begin;$("next").onclick=next;
+$("retry").onclick=()=>{show("start");drawSetup()};
+drawSetup();
+</script>
+</body>
+</html>
